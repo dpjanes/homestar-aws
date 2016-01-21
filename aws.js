@@ -24,7 +24,7 @@
 
 /**
  */
-var setup = function(app, homestar) {
+var setup = function(app, locals) {
     console.log("HERE:A");
 };
 

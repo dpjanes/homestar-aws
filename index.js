@@ -24,25 +24,6 @@
 
 var aws = require("./aws");
 
-exports.homestar = null;
-exports.web = {
-    setup: function(app, homestar) {
-        exports.homestar = homestar;
-
-        aws
-
-        /*
-         e.g. changing settings
-        _.d.set(homestar.settings, "/webserver/require_login", true);
-         */
-
-        /*
-         e.g. adding Express pages
-        app.get("/admin/log/in", homestar.make_dynamic({
-            template: path.join(__dirname, "dynamic/login.html"),
-            customize: access.login,
-            require_login: false,
-        }));
-         */
-    },
+exports.homestar = {
+    setup: aws.setup,
 }
