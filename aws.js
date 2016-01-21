@@ -1,5 +1,5 @@
 /*
- *  index.js
+ *  aws.js
  *
  *  David Janes
  *  IOTDB.org
@@ -22,27 +22,14 @@
 
 "use strict";
 
-var aws = require("./aws");
+/**
+ */
+var setup = function(app, homestar) {
+    console.log("HERE:A");
+};
 
-exports.homestar = null;
-exports.web = {
-    setup: function(app, homestar) {
-        exports.homestar = homestar;
 
-        aws
-
-        /*
-         e.g. changing settings
-        _.d.set(homestar.settings, "/webserver/require_login", true);
-         */
-
-        /*
-         e.g. adding Express pages
-        app.get("/admin/log/in", homestar.make_dynamic({
-            template: path.join(__dirname, "dynamic/login.html"),
-            customize: access.login,
-            require_login: false,
-        }));
-         */
-    },
-}
+/**
+ *  API
+ */
+exports.setup = setup;
