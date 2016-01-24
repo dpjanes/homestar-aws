@@ -25,5 +25,5 @@
 var aws = require("./aws");
 
 exports.homestar = {
-    setup: aws.setup,
+    on_ready: aws.on_ready,
 }

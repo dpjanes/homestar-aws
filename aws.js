@@ -24,12 +24,25 @@
 
 /**
  */
-var setup = function(app, locals) {
-    console.log("HERE:A");
+var on_ready = function(locals) {
+    _to(locals);
+    _from(locals);
 };
 
+var _to = function(locals) {
+    var homestar = locals.homestar;
+    var iotdb_transporter = homestar.things.make_transporter();
+    var aws_transporter = new AWSTransport();
+    
+    iotdb_transport.push_to(aws_transporter, {
+        user: homestar.users.owner(),
+    });
+};
+
+var _from = function(locals) {
+};
 
 /**
  *  API
  */
-exports.setup = setup;
+exports.on_ready = on_ready;
