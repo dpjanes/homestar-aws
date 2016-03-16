@@ -30,6 +30,7 @@ const path = require('path')
 const fs = require('fs')
 const url = require('url')
 
+const iotdb_transport = require('iotdb-transport');
 const MQTTTransport = require('iotdb-transport-mqtt').Transport;
 const IOTDBTransport = require('iotdb-transport-iotdb').Transport;
 
@@ -50,11 +51,11 @@ var transport = new MQTTTransport({
 });
  */
 
-const mqtt_transport = function(locals) {
+const make_mqtt_transporter = function(locals) {
     const certificate_id = _.d.get(locals.homestar.settings, "aws/mqtt/certificate_id");
     if (!certificate_id) {
         logger.error({
-            method: "mqtt_transport",
+            method: "make_mqtt_transporter",
             cause: "likely you haven't set up module homestar-homestar correctly",
         }, "missing settings.aws.mqtt.certificate_id");
         return null;
@@ -65,7 +66,7 @@ const mqtt_transport = function(locals) {
     const folders = cfg.cfg_find(cfg.cfg_envd(), search, folder_name);
     if (folders.length === 0) {
         logger.error({
-            method: "mqtt_transport",
+            method: "make_mqtt_transporter",
             search: [".iotdb", "$HOME/.iotdb", ],
             folder_name: path.join("certs", certificate_id),
             cause: "are you running in the wrong folder - check .iotdb/certs",
@@ -91,26 +92,18 @@ const mqtt_transport = function(locals) {
  *  Functions defined in index.setup
  */
 var on_ready = function(locals) {
-    console.log("on_ready");
-        // console.log("HERE:XXX", locals.homestar.settings.aws);
-        // console.log(locals.homestar.things);
-        // console.log(locals.homestar.recipes);
-        mqtt_transport(locals);
-        process.exit();
+    const mqtt_transporter = make_mqtt_transporter(locals);
+    const iotdb_transporter = locals.homestar.things.make_transporter();
+    const owner = locals.homestar.users.owner();
 
-    /*
-    transport.updated({
-        id: 'FirstIntent',
-        band: 'command',
-    }, function(error, ud) {
-        if (error) {
-            console.log("#", error);
-            return;
-        }
-
-        console.log("+", ud.value);
+    iotdb_transport.bind(iotdb_transporter, mqtt_transporter, {
+        bands: [ "meta", "istate", "ostate", "model", ],
+        user: owner,
     });
-     */
+
+    logger.info({
+        method: "on_ready",
+    }, "connected AWS to Things");
 };
 
 exports.on_ready = on_ready;
