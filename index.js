@@ -3,7 +3,7 @@
  *
  *  David Janes
  *  IOTDB.org
- *  2016-01-21
+ *  2016-03-15
  *
  *  Copyright [2013-2016] [David P. Janes]
  *
@@ -22,8 +22,11 @@
 
 "use strict";
 
-var aws = require("./aws");
+var homestar = require('./homestar');
 
 exports.homestar = {
-    on_ready: aws.on_ready,
+    /**
+     *  Called whenever webserver is up and running
+     */
+    on_ready: homestar.on_ready,
 }
