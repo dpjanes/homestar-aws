@@ -32,24 +32,11 @@ const url = require('url')
 
 const iotdb_transport = require('iotdb-transport');
 const MQTTTransport = require('iotdb-transport-mqtt').Transport;
-const IOTDBTransport = require('iotdb-transport-iotdb').Transport;
 
 const logger = iotdb.logger({
     name: 'homestar-homestar',
     module: 'homestar',
 });
-
-
-/*
-var transport = new MQTTTransport({
-    host: "A1GOKL7JWGA91X.iot.us-east-1.amazonaws.com",
-    prefix: "iotdb/homestar/0/81EA6324-418D-459C-A9C4-D430F30021C7/alexa",
-    ca: path.join(__dirname, "certs/rootCA.pem"),
-    cert: path.join(__dirname, "certs/cert.pem"),
-    key: path.join(__dirname, "certs/private.pem"),
-    allow_updated: true,
-});
- */
 
 const make_mqtt_transporter = function(locals) {
     const certificate_id = _.d.get(locals.homestar.settings, "aws/mqtt/certificate_id");

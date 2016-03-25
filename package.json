@@ -5,6 +5,7 @@
     }, 
     "dependencies": {
         "iotdb": ">=0.11.0", 
+        "iotdb-transport": "~0.0.18",
         "iotdb-transport-mqtt": "~0.0.18"
     }, 
     "description": "HomeStar extension to allow control through AWS IoT", 

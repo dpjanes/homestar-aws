@@ -6,6 +6,8 @@
 #   2016-01-21
 #
 
+exit
+
 PACKAGE=homestar-aws
 DIST_ROOT=/var/tmp/.dist.$$
 
