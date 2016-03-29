@@ -29,4 +29,9 @@ exports.homestar = {
      *  Called whenever webserver is up and running
      */
     on_ready: homestar.on_ready,
+
+    /**
+     *  Called when the profile is updated
+     */
+    on_profile: homestar.on_profile,
 }
