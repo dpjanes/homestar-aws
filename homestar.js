@@ -159,25 +159,30 @@ var _unpack = function(body) {
 
 var _save = function(body) {
     return new Promise(( resolve, reject ) => {
-        var nd = {};
+        var awsd = {};
 
         var keys = [ "url", "consumer_key", "certificate_id", "certificate_arn", ];
         keys.map((key) => {
             var value = body[key];
             if (value) {
-                nd[key] = value;
+                awsd[key] = value;
             }
         });
 
-        iotdb.keystore().save("/homestar/runner/keys/aws", nd);
+        iotdb.keystore().save("/homestar/runner/keys/aws", awsd);
 
+        logger.info({
+            module: "_save",
+        }, "added AWS keys to Keystore!");
+
+        /*
         console.log("-------------");
-        console.log("unpacked", nd);
+        console.log("unpacked", awsd);
+        */
 
-        resolve(body);
+        resolve(awsd);
     });
 };
-
 
 /**
  */
@@ -224,13 +229,24 @@ var on_profile = function(locals, profile) {
                 .then(_make_unpack_dirs)
                 .then(_unpack)
                 .then(_save)
-                .then(() => {
-                    console.log("HERE:OK");
-                    process.exit();
+                .then((awsd) => {
+                    logger.info({
+                        method: "on_profile",
+                        awsd: awsd,
+                    }, "AWS keys setup");
+
+                    settings.keys.aws = awsd;
+
+                    process.nextTick(() => {
+                        on_ready(locals);
+                    });
+
                 })
                 .catch((error) => {
-                    console.log("HERE:ERROR", error);
-                    process.exit();
+                    logger.error({
+                        method: "on_profile",
+                        error: _.error.message(result.error),
+                    }, "could not get AWS keys");
                 });
         });
 };
