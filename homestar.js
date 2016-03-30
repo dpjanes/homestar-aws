@@ -220,7 +220,7 @@ var on_profile = function(locals, profile) {
                     status: result.statusCode,
                     url: API_CERTS,
                     error: _.error.message(result.error),
-                }, "profile_aws failed");
+                }, "could not retrieve AWS keys");
 
                 return;
             }
