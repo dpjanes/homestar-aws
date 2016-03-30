@@ -8,7 +8,8 @@
         "iotdb-transport": "~0.0.31", 
         "iotdb-transport-mqtt": "~0.0.23", 
         "mkdirp": "~0.5.1", 
-        "q": "~1.4.1"
+        "q": "~1.4.1", 
+        "unirest": "~0.4.2"
     }, 
     "description": "HomeStar extension to allow control through AWS IoT", 
     "devDependencies": {
@@ -35,5 +36,5 @@
     "scripts": {
         "test": "grunt"
     }, 
-    "version": "0.0.0"
+    "version": "0.0.1"
 }
