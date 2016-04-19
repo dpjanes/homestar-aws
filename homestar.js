@@ -26,10 +26,10 @@ const iotdb = require('iotdb');
 const _ = iotdb._;
 const cfg = iotdb.cfg;
 
-const path = require('path')
-const fs = require('fs')
-const url = require('url')
-const unirest = require('unirest')
+const path = require('path');
+const fs = require('fs');
+const url = require('url');
+const unirest = require('unirest');
 const mkdirp = require('mkdirp');
 const Q = require('q');
 
@@ -41,13 +41,34 @@ const logger = iotdb.logger({
     module: 'homestar',
 });
 
-const _make_mqtt_transporter = function(locals) {
-    var settings = locals.homestar.settings;
+/**
+ *  Even though this isn't really a Bridge, we make 
+ *  it look like one in the settings
+ */
+const _initd = function () {
+    const initd = _.defaults(initd,
+        iotdb.keystore().get("bridges/AWSBridge/initd"), {
+            out_bands: ["meta", "istate", /* "ostate", */ "model", "connection", ],
+            use_iot_model: true,
+        }
+    );
+};
+
+/**
+ *  This makes the MQTT transporter for sending _to_ AWS.
+ *
+ *  Note that the message sent isn't "nice", this has to do with
+ *  permission checking etc that has to take place on AWS to
+ *  make sure no one is hacking the system.
+ */
+const _make_out_mqtt_transporter = function (locals) {
+    const settings = locals.homestar.settings;
+    const initd = _initd();
 
     const certificate_id = _.d.get(settings, "keys/aws/certificate_id");
     if (!certificate_id) {
         logger.error({
-            method: "_make_mqtt_transporter",
+            method: "_make_out_mqtt_transporter",
             cause: "likely you haven't set up module homestar-homestar correctly",
         }, "missing settings.aws.mqtt.certificate_id");
         return null;
@@ -58,7 +79,7 @@ const _make_mqtt_transporter = function(locals) {
     const folders = cfg.cfg_find(cfg.cfg_envd(), search, folder_name);
     if (folders.length === 0) {
         logger.error({
-            method: "_make_mqtt_transporter",
+            method: "_make_out_mqtt_transporter",
             search: [".iotdb", "$HOME/.iotdb", ],
             folder_name: path.join("certs", certificate_id),
             cause: "are you running in the wrong folder - check .iotdb/certs",
@@ -71,59 +92,49 @@ const _make_mqtt_transporter = function(locals) {
     const aws_urlp = url.parse(aws_url);
 
     return new MQTTTransport({
+        verbose: true,
         host: aws_urlp.host,
         prefix: aws_urlp.path.replace(/^\//, ''),
         ca: path.join(cert_folder, "rootCA.pem"),
         cert: path.join(cert_folder, "cert.pem"),
         key: path.join(cert_folder, "private.pem"),
         allow_updated: true,
-        channel: function(initd, id, band) {
-            // throw away 'id' and 'band'
-            return iotdb_transport.channel(initd);
-        },
-        pack: function(d, id, band) {
-            d = _.d.clone.shallow(d);
-            d["@iot:id"] = id || "";
-            d["@iot:band"] = band || "";
+        channel: function (initd, id, band) {},
+        pack: function (d, id, band) {
+            if (initd.use_iot_model && (band === "model") && d["iot:model"]) {
+                d = {
+                    "iot:model": d["iot:model"],
+                };
+            }
 
-            return JSON.stringify(d);
+            const msgd = {
+                c: {
+                    n: "put",
+                    id: id || "",
+                    band: band || "",
+                },
+                p: d,
+            };
+
+            return JSON.stringify(msgd);
         },
     });
+};
+
+const _unpack_dir = function (body) {
+    return path.join(".", ".iotdb", "certs", body.certificate_id);
 };
 
 /**
- *  Functions defined in index.setup
+ *  This makes sure the needed folders exist
  */
-var on_ready = function(locals) {
-    const mqtt_transporter = _make_mqtt_transporter(locals);
-    if (!mqtt_transporter) {
-        return;
-    }
-
-    const iotdb_transporter = locals.homestar.things.make_transporter();
-    const owner = locals.homestar.users.owner();
-
-    iotdb_transport.bind(iotdb_transporter, mqtt_transporter, {
-        bands: [ "meta", "istate", "ostate", "model", ],
-        user: owner,
-    });
-
-    logger.info({
-        method: "on_ready",
-    }, "connected AWS to Things");
-};
-
-var _unpack_dir = function(body) {
-    return path.join(".", ".iotdb", "certs", body.certificate_id);
-}
-
-var _make_unpack_dirs = function(body) {
-    return new Promise(( resolve, reject ) => {
+const _make_unpack_dirs = function (body) {
+    return new Promise((resolve, reject) => {
         if (!body.certificate_id) {
             return reject(new Error("no certificate_id?"));
         }
 
-        mkdirp(_unpack_dir(body), function(error) {
+        mkdirp(_unpack_dir(body), function (error) {
             if (error) {
                 return reject(error);
             }
@@ -133,8 +144,12 @@ var _make_unpack_dirs = function(body) {
     });
 };
 
-var _unpack = function(body) {
-    return new Promise(( resolve, reject ) => {
+/**
+ *  This takes the certificates from HomeStar.io and
+ *  unpacks them into the filesystem.
+ */
+const _unpack = function (body) {
+    return new Promise((resolve, reject) => {
         var file_path;
         body.inventory = [];
         body.inventory.push("aws.json");
@@ -143,25 +158,26 @@ var _unpack = function(body) {
             body.inventory.push(file_name);
             file_path = path.join(_unpack_dir(body), file_name);
             fs.writeFileSync(file_path, body.files[file_name]);
-        };
+        }
 
         delete body.files;
 
         file_path = path.join(_unpack_dir(body), "aws.json");
         fs.writeFileSync(file_path, JSON.stringify(body, null, 2));
 
-        // console.log("-------------");
-        // console.log("unpacked", _unpack_dir(body));
-
         resolve(body);
     });
 };
 
-var _save = function(body) {
-    return new Promise(( resolve, reject ) => {
+/**
+ *  This takes the certificates from HomeStar.io and
+ *  adds them to your settings
+ */
+const _save = function (body) {
+    return new Promise((resolve, reject) => {
         var awsd = {};
 
-        var keys = [ "url", "consumer_key", "certificate_id", "certificate_arn", ];
+        var keys = ["url", "consumer_key", "certificate_id", "certificate_arn", ];
         keys.map((key) => {
             var value = body[key];
             if (value) {
@@ -175,18 +191,43 @@ var _save = function(body) {
             module: "_save",
         }, "added AWS keys to Keystore!");
 
-        /*
-        console.log("-------------");
-        console.log("unpacked", awsd);
-        */
-
         resolve(awsd);
     });
 };
 
 /**
+ *  This does the work of setting up a connection between IOTDB and AWS
  */
-var on_profile = function(locals, profile) {
+const _broadcast_to_aws = function (locals) {
+    const mqtt_transporter = _make_out_mqtt_transporter(locals);
+    if (!mqtt_transporter) {
+        logger.info({
+            method: "_broadcast_to_aws",
+        }, "could not make MQTTTransporter - see previous messages for reason");
+        return;
+    }
+
+    const iotdb_transporter = locals.homestar.things.make_transporter();
+    const owner = locals.homestar.users.owner();
+
+    iotdb_transport.bind(iotdb_transporter, mqtt_transporter, {
+        bands: _initd().out_bands,
+        user: owner,
+    });
+
+    logger.info({
+        method: "_broadcast_to_aws",
+    }, "connected AWS to Things");
+};
+
+/* --- iotdb-homestar API --- */
+
+/**
+ *  This is called when iotdb-homestar successfully contacts HomeStar.io.
+ *  It will get X.509 certificates to contact AWS if you do not
+ *  have them already.
+ */
+const on_profile = function (locals, profile) {
     var settings = locals.homestar.settings;
 
     var consumer_key = _.d.get(settings, "keys/homestar/key");
@@ -199,8 +240,7 @@ var on_profile = function(locals, profile) {
 
     var keys = _.d.get(settings, "keys/aws");
     if (keys) {
-        logger.info({
-        }, "AWS keys already downloaded -- good to go");
+        logger.info({}, "AWS keys already downloaded -- good to go");
         return;
     }
 
@@ -238,7 +278,7 @@ var on_profile = function(locals, profile) {
                     settings.keys.aws = awsd;
 
                     process.nextTick(() => {
-                        on_ready(locals);
+                        _broadcast_to_aws(locals);
                     });
 
                 })
@@ -251,5 +291,16 @@ var on_profile = function(locals, profile) {
         });
 };
 
+/**
+ *  Called by iotdb-homestar webserver is up and running.
+ *  This is really 
+ */
+const on_ready = function (locals) {
+    _broadcast_to_aws(locals);
+};
+
+/**
+ *  API
+ */
 exports.on_ready = on_ready;
 exports.on_profile = on_profile;

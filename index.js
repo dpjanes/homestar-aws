@@ -34,4 +34,4 @@ exports.homestar = {
      *  Called when the profile is updated
      */
     on_profile: homestar.on_profile,
-}
+};
