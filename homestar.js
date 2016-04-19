@@ -34,12 +34,15 @@ const mkdirp = require('mkdirp');
 const Q = require('q');
 
 const iotdb_transport = require('iotdb-transport');
-const MQTTTransport = require('iotdb-transport-mqtt').Transport;
+const iotdb_transport_mqtt = require('iotdb-transport-mqtt');
+
 
 const logger = iotdb.logger({
     name: 'homestar-homestar',
     module: 'homestar',
 });
+
+var _mqtt;
 
 /**
  *  Even though this isn't really a Bridge, we make 
@@ -55,14 +58,11 @@ const _initd = function () {
     );
 };
 
-/**
- *  This makes the MQTT transporter for sending _to_ AWS.
- *
- *  Note that the message sent isn't "nice", this has to do with
- *  permission checking etc that has to take place on AWS to
- *  make sure no one is hacking the system.
- */
-const _make_out_mqtt_transporter = function (locals) {
+const _setup_mqtt = function (locals) {
+    if (_mqtt) {
+        return;
+    }
+
     const settings = locals.homestar.settings;
     const initd = _initd();
 
@@ -92,13 +92,66 @@ const _make_out_mqtt_transporter = function (locals) {
     const aws_url = _.d.get(settings, "keys/aws/url");
     const aws_urlp = url.parse(aws_url);
 
-    return new MQTTTransport({
+    _mqtt = new iotdb_transport_mqtt.mqtt_connect({
         verbose: true,
         host: aws_urlp.host,
         prefix: aws_urlp.path.replace(/^\//, ''),
         ca: path.join(cert_folder, "rootCA.pem"),
         cert: path.join(cert_folder, "cert.pem"),
         key: path.join(cert_folder, "private.pem"),
+    });
+
+    return;
+};
+
+/**
+ *  This makes the MQTT transporter for sending _to_ AWS.
+ *
+ *  Note that the message sent isn't "nice", this has to do with
+ *  permission checking etc that has to take place on AWS to
+ *  make sure no one is hacking the system.
+ */
+const _make_out_mqtt_transporter = function (locals) {
+    const settings = locals.homestar.settings;
+    const initd = _initd();
+
+    /*
+    const certificate_id = _.d.get(settings, "keys/aws/certificate_id");
+    if (!certificate_id) {
+        logger.error({
+            method: "_make_out_mqtt_transporter",
+            cause: "likely you haven't set up module homestar-homestar correctly",
+        }, "missing settings.aws.mqtt.certificate_id");
+        return null;
+    }
+
+    const search = [".iotdb", "$HOME/.iotdb", ];
+    const folder_name = path.join("certs", certificate_id);
+    const folders = cfg.cfg_find(cfg.cfg_envd(), search, folder_name);
+    if (folders.length === 0) {
+        logger.error({
+            method: "_make_out_mqtt_transporter",
+            search: [".iotdb", "$HOME/.iotdb", ],
+            folder_name: path.join("certs", certificate_id),
+            cause: "are you running in the wrong folder - check .iotdb/certs",
+        }, "could not find the 'certs' folder");
+        return null;
+    }
+    const cert_folder = folders[0];
+    */
+
+    const aws_url = _.d.get(settings, "keys/aws/url");
+    const aws_urlp = url.parse(aws_url);
+
+    return new iotdb_transport_mqtt.Transport({
+        verbose: true,
+        prefix: aws_urlp.path.replace(/^\//, ''),
+        /*
+        host: aws_urlp.host,
+        ca: path.join(cert_folder, "rootCA.pem"),
+        cert: path.join(cert_folder, "cert.pem"),
+        key: path.join(cert_folder, "private.pem"),
+        */
         allow_updated: true,
         channel: (initd, id, band) => {
             // throw away 'id' and 'band'
@@ -122,7 +175,7 @@ const _make_out_mqtt_transporter = function (locals) {
 
             return JSON.stringify(msgd);
         },
-    });
+    }, _mqtt);
 };
 
 const _unpack_dir = function (body) {
@@ -224,6 +277,16 @@ const _setup_mqtt_to_aws = function (locals) {
     }, "connected AWS to Things");
 };
 
+const _setup_ping = function (locals) {
+    const initd = _initd();
+    if (!initd.ping) {
+        logger.warn({
+            method: "_setup_ping",
+        }, "AWS ping is turned off");
+        return;
+    }
+};
+
 /* --- iotdb-homestar API --- */
 
 /**
@@ -282,7 +345,9 @@ const on_profile = function (locals, profile) {
                     settings.keys.aws = awsd;
 
                     process.nextTick(() => {
+                        _setup_mqtt(locals);
                         _setup_mqtt_to_aws(locals);
+                        _setup_ping(locals);
                     });
 
                 })
@@ -300,7 +365,9 @@ const on_profile = function (locals, profile) {
  *  This is really 
  */
 const on_ready = function (locals) {
+    _setup_mqtt(locals);
     _setup_mqtt_to_aws(locals);
+    _setup_ping(locals);
 };
 
 /**
