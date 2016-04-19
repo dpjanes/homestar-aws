@@ -46,7 +46,7 @@ const logger = iotdb.logger({
  *  it look like one in the settings
  */
 const _initd = function () {
-    const initd = _.defaults(initd,
+    return _.d.compose.shallow({},
         iotdb.keystore().get("bridges/AWSBridge/initd"), {
             out_bands: ["meta", "istate", /* "ostate", */ "model", "connection", ],
             use_iot_model: true,
@@ -99,8 +99,11 @@ const _make_out_mqtt_transporter = function (locals) {
         cert: path.join(cert_folder, "cert.pem"),
         key: path.join(cert_folder, "private.pem"),
         allow_updated: true,
-        channel: function (initd, id, band) {},
-        pack: function (d, id, band) {
+        channel: (initd, id, band) => {
+            // throw away 'id' and 'band'
+            return iotdb_transport.channel(initd, "o");
+        },
+        pack: (d, id, band) => {
             if (initd.use_iot_model && (band === "model") && d["iot:model"]) {
                 d = {
                     "iot:model": d["iot:model"],
