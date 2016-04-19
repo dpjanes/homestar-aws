@@ -50,6 +50,7 @@ const _initd = function () {
         iotdb.keystore().get("bridges/AWSBridge/initd"), {
             out_bands: ["meta", "istate", /* "ostate", */ "model", "connection", ],
             use_iot_model: true,
+            ping: 30,
         }
     );
 };
@@ -201,11 +202,11 @@ const _save = function (body) {
 /**
  *  This does the work of setting up a connection between IOTDB and AWS
  */
-const _broadcast_to_aws = function (locals) {
+const _setup_mqtt_to_aws = function (locals) {
     const mqtt_transporter = _make_out_mqtt_transporter(locals);
     if (!mqtt_transporter) {
         logger.info({
-            method: "_broadcast_to_aws",
+            method: "_setup_mqtt_to_aws",
         }, "could not make MQTTTransporter - see previous messages for reason");
         return;
     }
@@ -219,7 +220,7 @@ const _broadcast_to_aws = function (locals) {
     });
 
     logger.info({
-        method: "_broadcast_to_aws",
+        method: "_setup_mqtt_to_aws",
     }, "connected AWS to Things");
 };
 
@@ -281,7 +282,7 @@ const on_profile = function (locals, profile) {
                     settings.keys.aws = awsd;
 
                     process.nextTick(() => {
-                        _broadcast_to_aws(locals);
+                        _setup_mqtt_to_aws(locals);
                     });
 
                 })
@@ -299,7 +300,7 @@ const on_profile = function (locals, profile) {
  *  This is really 
  */
 const on_ready = function (locals) {
-    _broadcast_to_aws(locals);
+    _setup_mqtt_to_aws(locals);
 };
 
 /**
