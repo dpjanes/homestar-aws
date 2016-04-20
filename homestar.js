@@ -36,6 +36,7 @@ const Q = require('q');
 const iotdb_transport = require('iotdb-transport');
 const iotdb_transport_mqtt = require('iotdb-transport-mqtt');
 
+const OUTPUT_TOPIC = "o";
 
 const logger = iotdb.logger({
     name: 'homestar-homestar',
@@ -51,13 +52,17 @@ var _mqtt;
 const _initd = function () {
     return _.d.compose.shallow({},
         iotdb.keystore().get("bridges/AWSBridge/initd"), {
-            out_bands: ["meta", "istate", /* "ostate", */ "model", "connection", ],
+            out_bands: ["meta", "istate", "model", "connection", ],
+            in_bands: [ "ostate", "meta", ],
             use_iot_model: true,
-            ping: 30,
+            ping: 5 * 60,
         }
     );
 };
 
+/**
+ *  Create a connection to AWS MQTT. This will be shared amongst multiple connections
+ */
 const _setup_mqtt = function (locals) {
     if (_mqtt) {
         return;
@@ -95,7 +100,6 @@ const _setup_mqtt = function (locals) {
     _mqtt = new iotdb_transport_mqtt.mqtt_connect({
         verbose: true,
         host: aws_urlp.host,
-        prefix: aws_urlp.path.replace(/^\//, ''),
         ca: path.join(cert_folder, "rootCA.pem"),
         cert: path.join(cert_folder, "cert.pem"),
         key: path.join(cert_folder, "private.pem"),
@@ -112,33 +116,16 @@ const _setup_mqtt = function (locals) {
  *  make sure no one is hacking the system.
  */
 const _make_out_mqtt_transporter = function (locals) {
+    if (!_mqtt) {
+        logger.error({
+            method: "_make_out_mqtt_transporter",
+            cause: "see previous errors",
+        }, "_mqtt is not set");
+        return;
+    }
+
     const settings = locals.homestar.settings;
     const initd = _initd();
-
-    /*
-    const certificate_id = _.d.get(settings, "keys/aws/certificate_id");
-    if (!certificate_id) {
-        logger.error({
-            method: "_make_out_mqtt_transporter",
-            cause: "likely you haven't set up module homestar-homestar correctly",
-        }, "missing settings.aws.mqtt.certificate_id");
-        return null;
-    }
-
-    const search = [".iotdb", "$HOME/.iotdb", ];
-    const folder_name = path.join("certs", certificate_id);
-    const folders = cfg.cfg_find(cfg.cfg_envd(), search, folder_name);
-    if (folders.length === 0) {
-        logger.error({
-            method: "_make_out_mqtt_transporter",
-            search: [".iotdb", "$HOME/.iotdb", ],
-            folder_name: path.join("certs", certificate_id),
-            cause: "are you running in the wrong folder - check .iotdb/certs",
-        }, "could not find the 'certs' folder");
-        return null;
-    }
-    const cert_folder = folders[0];
-    */
 
     const aws_url = _.d.get(settings, "keys/aws/url");
     const aws_urlp = url.parse(aws_url);
@@ -146,16 +133,10 @@ const _make_out_mqtt_transporter = function (locals) {
     return new iotdb_transport_mqtt.Transport({
         verbose: true,
         prefix: aws_urlp.path.replace(/^\//, ''),
-        /*
-        host: aws_urlp.host,
-        ca: path.join(cert_folder, "rootCA.pem"),
-        cert: path.join(cert_folder, "cert.pem"),
-        key: path.join(cert_folder, "private.pem"),
-        */
         allow_updated: true,
         channel: (initd, id, band) => {
             // throw away 'id' and 'band'
-            return iotdb_transport.channel(initd, "o");
+            return iotdb_transport.channel(initd, OUTPUT_TOPIC);
         },
         pack: (d, id, band) => {
             if (initd.use_iot_model && (band === "model") && d["iot:model"]) {
@@ -285,6 +266,38 @@ const _setup_ping = function (locals) {
         }, "AWS ping is turned off");
         return;
     }
+
+    if (!_mqtt) {
+        logger.error({
+            method: "_make_out_mqtt_transporter",
+            cause: "see previous errors",
+        }, "_mqtt is not set");
+        return;
+    }
+
+    const settings = locals.homestar.settings;
+    const aws_url = _.d.get(settings, "keys/aws/url");
+    const aws_urlp = url.parse(aws_url);
+    const channel = aws_urlp.path.replace(/^\//, '') + "/" + OUTPUT_TOPIC;
+
+    setInterval(() => {
+        var pd = iotdb.controller_meta();
+        pd = _.timestamp.add(pd);
+        pd = _.ld.compact(pd);
+
+        const msgd = {
+            c: {
+                n: "ping",
+            },
+            p: pd,
+        };
+
+        _mqtt.publish(channel, JSON.stringify(msgd), () => {
+            logger.info({
+                channel: channel,
+            }, "pinged");
+        });
+    }, initd.ping * 1000);
 };
 
 /* --- iotdb-homestar API --- */
@@ -295,9 +308,9 @@ const _setup_ping = function (locals) {
  *  have them already.
  */
 const on_profile = function (locals, profile) {
-    var settings = locals.homestar.settings;
+    const settings = locals.homestar.settings;
 
-    var consumer_key = _.d.get(settings, "keys/homestar/key");
+    const consumer_key = _.d.get(settings, "keys/homestar/key");
     if (_.is.Empty(consumer_key)) {
         logger.info({
             cause: "Homestar API Keys have not been setup",
@@ -305,14 +318,14 @@ const on_profile = function (locals, profile) {
         return;
     }
 
-    var keys = _.d.get(settings, "keys/aws");
+    const keys = _.d.get(settings, "keys/aws");
     if (keys) {
         logger.info({}, "AWS keys already downloaded -- good to go");
         return;
     }
 
-    var API_ROOT = settings.homestar.url + '/api/1.0';
-    var API_CERTS = API_ROOT + '/consumers/' + consumer_key + '/certs';
+    const API_ROOT = settings.homestar.url + '/api/1.0';
+    const API_CERTS = API_ROOT + '/consumers/' + consumer_key + '/certs';
 
     unirest
         .get(API_CERTS)
