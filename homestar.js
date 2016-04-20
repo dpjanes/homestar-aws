@@ -280,7 +280,7 @@ const _setup_ping = function (locals) {
     const aws_urlp = url.parse(aws_url);
     const channel = aws_urlp.path.replace(/^\//, '') + "/" + OUTPUT_TOPIC;
 
-    setInterval(() => {
+    const _ping = () => {
         var pd = iotdb.controller_meta();
         pd = _.timestamp.add(pd);
         pd = _.ld.compact(pd);
@@ -297,7 +297,10 @@ const _setup_ping = function (locals) {
                 channel: channel,
             }, "pinged");
         });
-    }, initd.ping * 1000);
+    };
+
+    _ping();
+    setInterval(_ping, initd.ping * 1000);
 };
 
 /* --- iotdb-homestar API --- */
