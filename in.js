@@ -134,6 +134,13 @@ const setup = function (locals) {
         user: owner,
         updated: true,
         verbose: true,
+        update: false,
+        updated: true,
+        get: false,
+        list: false,
+        added: false,
+        copy: false,
+        what: "AWS-OUT",
     });
 
     logger.info({

@@ -36,7 +36,6 @@ const transport_in = require('./in');
 const ping = require('./ping');
 const keys = require('./keys');
 
-
 /* --- iotdb-homestar API --- */
 
 /**
@@ -66,9 +65,9 @@ const on_ready = function (locals) {
         return;
     }
 
-    transport_out.setup(locals);
+    // transport_out.setup(locals);
     transport_in.setup(locals);
-    ping.setup(locals);
+    // ping.setup(locals);
 };
 
 /**

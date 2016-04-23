@@ -63,9 +63,10 @@ const _create_transporter = function (locals) {
     const aws_urlp = url.parse(aws_url);
 
     return new iotdb_transport_mqtt.Transport({
+        what: "AWS-OUT",
         verbose: true,
         prefix: aws_urlp.path.replace(/^\//, ''),
-        allow_updated: true,
+        allow_updated: false,
         channel: (initd, id, band) => {
             // throw away 'id' and 'band'
             return iotdb_transport.channel(initd, OUTPUT_TOPIC);
