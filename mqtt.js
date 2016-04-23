@@ -1,9 +1,9 @@
 /*
- *  homestar.js
+ *  mqtt.js
  *
  *  David Janes
  *  IOTDB.org
- *  2016-03-16
+ *  2016-04-23
  *
  *  Copyright [2013-2016] [David P. Janes]
  *
@@ -27,13 +27,8 @@ const _ = iotdb._;
 const cfg = iotdb.cfg;
 
 const path = require('path');
-const fs = require('fs');
 const url = require('url');
-const unirest = require('unirest');
-const mkdirp = require('mkdirp');
-const Q = require('q');
 
-const iotdb_transport = require('iotdb-transport');
 const iotdb_transport_mqtt = require('iotdb-transport-mqtt');
 
 const logger = iotdb.logger({
