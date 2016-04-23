@@ -45,6 +45,7 @@ const logger = iotdb.logger({
 
 const mqtt = require('./mqtt');
 const out = require('./out');
+const ping = require('./ping');
 
 const _unpack_dir = function (body) {
     return path.join(".", ".iotdb", "certs", body.certificate_id);
@@ -92,52 +93,6 @@ const _unpack = function (body) {
 
         resolve(body);
     });
-};
-
-const _setup_ping = function (locals) {
-    const initd = mqtt.initd(locals);
-    if (!initd.ping) {
-        logger.warn({
-            method: "_setup_ping",
-        }, "AWS ping is turned off");
-        return;
-    }
-
-    const mqtt_client = mqtt.client(locals);
-    if (!mqtt_client) {
-        logger.error({
-            method: "_make_out_mqtt_transporter",
-            cause: "see previous errors",
-        }, "mqtt_client is not set");
-        return;
-    }
-
-    const settings = locals.homestar.settings;
-    const aws_url = _.d.get(settings, "keys/aws/url");
-    const aws_urlp = url.parse(aws_url);
-    const channel = aws_urlp.path.replace(/^\//, '') + "/" + OUTPUT_TOPIC;
-
-    const _ping = () => {
-        var pd = iotdb.controller_meta();
-        pd = _.timestamp.add(pd);
-        pd = _.ld.compact(pd);
-
-        const msgd = {
-            c: {
-                n: "ping",
-            },
-            p: pd,
-        };
-
-        mqtt_client.publish(channel, JSON.stringify(msgd), () => {
-            logger.info({
-                channel: channel,
-            }, "pinged");
-        });
-    };
-
-    _ping();
-    setInterval(_ping, initd.ping * 1000);
 };
 
 /* --- iotdb-homestar API --- */
@@ -200,7 +155,7 @@ const on_profile = function (locals, profile) {
                     process.nextTick(() => {
                         // _setup_mqtt(locals);
                         out.setup(locals);
-                        _setup_ping(locals);
+                        ping.setup(locals);
                     });
 
                 })
@@ -219,7 +174,7 @@ const on_profile = function (locals, profile) {
  */
 const on_ready = function (locals) {
     out.setup(locals);
-    _setup_ping(locals);
+    ping.setup(locals);
 };
 
 /**
