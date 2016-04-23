@@ -59,6 +59,8 @@ const _create_transporter = function (locals) {
     const aws_url = _.d.get(settings, "keys/aws/url");
     const aws_urlp = url.parse(aws_url);
 
+    const runner_id = _.d.get(settings, "keys/homestar/key", null);
+
     return new iotdb_transport_mqtt.Transport({
         verbose: true,
         prefix: aws_urlp.path.replace(/^\//, ''),
@@ -84,7 +86,9 @@ const _create_transporter = function (locals) {
                     return;
                 } else if (msgd.c.n !== "updated") {
                     return;
-                } /* XXX check here for bounces */
+                } else if (msgd.c.src && (msgd.c.src === runner_id)) {
+                    return;
+                }
 
                 if (msgd.c.id && msgd.c.band) {
                     return [ msgd.c.id, msgd.c.band, ];

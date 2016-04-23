@@ -65,9 +65,9 @@ const on_ready = function (locals) {
         return;
     }
 
-    // transport_out.setup(locals);
+    transport_out.setup(locals);
     transport_in.setup(locals);
-    // ping.setup(locals);
+    ping.setup(locals);
 };
 
 /**
