@@ -69,7 +69,7 @@ const on_profile = function (locals, profile) {
  *  Called by iotdb-homestar webserver is up and running.
  */
 const on_ready = function (locals) {
-    if (!keys.ready()) {
+    if (!keys.ready(locals)) {
         logger.warn({
             method: "on_ready",
         }, "AWS connection is not configured");

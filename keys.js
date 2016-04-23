@@ -89,9 +89,34 @@ const _unpack = function (body) {
 };
 
 /**
+ */
+var _save = function(body) {
+    return new Promise(( resolve, reject ) => {
+        var awsd = {};
+
+        var keys = [ "url", "consumer_key", "certificate_id", "certificate_arn", ];
+        keys.map((key) => {
+            var value = body[key];
+            if (value) {
+                awsd[key] = value;
+            }
+        });
+
+        iotdb.keystore().save("/homestar/runner/keys/aws", awsd);
+
+        logger.info({
+            module: "_save",
+        }, "added AWS keys to Keystore!");
+
+        resolve(awsd);
+    });
+};
+
+/**
  *  Return true if keys are in place
  */
 const ready = function(locals) {
+    const settings = locals.homestar.settings;
     return !_.is.Empty(_.d.get(settings, "keys/aws"));
 };
 
@@ -113,7 +138,7 @@ const setup = function (locals, done) {
         return done(new errors.SetupRequired(), false);
     }
 
-    if (!ready(locals)) {
+    if (ready(locals)) {
         logger.info({
             method: "setup",
         }, "AWS keys already downloaded -- good to go");
