@@ -1,0 +1,115 @@
+/*
+ *  homestar.js
+ *
+ *  David Janes
+ *  IOTDB.org
+ *  2016-03-16
+ *
+ *  Copyright [2013-2016] [David P. Janes]
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+"use strict";
+
+const iotdb = require('iotdb');
+const _ = iotdb._;
+const cfg = iotdb.cfg;
+
+const path = require('path');
+const fs = require('fs');
+const url = require('url');
+const unirest = require('unirest');
+const mkdirp = require('mkdirp');
+const Q = require('q');
+
+const iotdb_transport = require('iotdb-transport');
+const iotdb_transport_mqtt = require('iotdb-transport-mqtt');
+
+const logger = iotdb.logger({
+    name: 'homestar-aws',
+    module: 'homestar',
+});
+
+/**
+ *  Even though this isn't really a Bridge, we make 
+ *  it look like one in the settings
+ */
+const mqtt_initd = function () {
+    return _.d.compose.shallow({},
+        iotdb.keystore().get("bridges/AWSBridge/initd"), {
+            out_bands: ["meta", "istate", "model", "connection", ],
+            in_bands: [ "ostate", "meta", ],
+            use_iot_model: true,
+            ping: 5 * 60,
+        }
+    );
+};
+
+/**
+ *  Create a connection to AWS MQTT. This will be shared amongst multiple connections
+ */
+const mqtt_client = function (locals) {
+    if (!locals._homestar_aws) {
+        locals._homestar_aws = {};
+    }
+    if (locals._homestar_aws.mqtt_client) {
+        return locals._homestar_aws.mqtt_client;
+    }
+
+    const settings = locals.homestar.settings;
+    const initd = mqtt_initd();
+
+    const certificate_id = _.d.get(settings, "keys/aws/certificate_id");
+    if (!certificate_id) {
+        logger.error({
+            method: "mqtt_client",
+            cause: "likely you haven't set up module homestar-homestar correctly",
+        }, "missing settings.aws.mqtt.certificate_id");
+        return null;
+    }
+
+    const search = [".iotdb", "$HOME/.iotdb", ];
+    const folder_name = path.join("certs", certificate_id);
+    const folders = cfg.cfg_find(cfg.cfg_envd(), search, folder_name);
+    if (folders.length === 0) {
+        logger.error({
+            method: "mqtt_client",
+            search: [".iotdb", "$HOME/.iotdb", ],
+            folder_name: path.join("certs", certificate_id),
+            cause: "are you running in the wrong folder - check .iotdb/certs",
+        }, "could not find the 'certs' folder");
+
+        return null;
+    }
+    const cert_folder = folders[0];
+
+    const aws_url = _.d.get(settings, "keys/aws/url");
+    const aws_urlp = url.parse(aws_url);
+
+    locals._homestar_aws.mqtt_client = new iotdb_transport_mqtt.connect({
+        verbose: true,
+        host: aws_urlp.host,
+        ca: path.join(cert_folder, "rootCA.pem"),
+        cert: path.join(cert_folder, "cert.pem"),
+        key: path.join(cert_folder, "private.pem"),
+    });
+
+    return locals._homestar_aws.mqtt_client;
+};
+
+/**
+ *  API
+ */
+exports.initd = mqtt_initd;
+exports.client = mqtt_client;

@@ -43,12 +43,13 @@ const logger = iotdb.logger({
     module: 'homestar',
 });
 
-var _mqtt;
+const mqtt = require('./mqtt');
 
 /**
  *  Even though this isn't really a Bridge, we make 
  *  it look like one in the settings
  */
+/*
 const _initd = function () {
     return _.d.compose.shallow({},
         iotdb.keystore().get("bridges/AWSBridge/initd"), {
@@ -59,10 +60,12 @@ const _initd = function () {
         }
     );
 };
+*/
 
 /**
  *  Create a connection to AWS MQTT. This will be shared amongst multiple connections
  */
+/*
 const _setup_mqtt = function (locals) {
     if (_mqtt) {
         return;
@@ -107,6 +110,7 @@ const _setup_mqtt = function (locals) {
 
     return;
 };
+*/
 
 /**
  *  This makes the MQTT transporter for sending _to_ AWS.
@@ -116,16 +120,17 @@ const _setup_mqtt = function (locals) {
  *  make sure no one is hacking the system.
  */
 const _make_out_mqtt_transporter = function (locals) {
-    if (!_mqtt) {
+    const mqtt_client = mqtt.client(locals);
+    if (!mqtt_client) {
         logger.error({
             method: "_make_out_mqtt_transporter",
             cause: "see previous errors",
-        }, "_mqtt is not set");
+        }, "mqtt_client is not set");
         return;
     }
 
     const settings = locals.homestar.settings;
-    const initd = _initd();
+    const initd = mqtt.initd(locals);
 
     const aws_url = _.d.get(settings, "keys/aws/url");
     const aws_urlp = url.parse(aws_url);
@@ -157,7 +162,7 @@ const _make_out_mqtt_transporter = function (locals) {
 
             return JSON.stringify(msgd);
         },
-    }, _mqtt);
+    }, mqtt_client);
 };
 
 const _unpack_dir = function (body) {
@@ -250,7 +255,7 @@ const _setup_mqtt_to_aws = function (locals) {
     const owner = locals.homestar.users.owner();
 
     iotdb_transport.bind(iotdb_transporter, mqtt_transporter, {
-        bands: _initd().out_bands,
+        bands: mqtt.initd(locals).out_bands,
         user: owner,
     });
 
@@ -260,7 +265,7 @@ const _setup_mqtt_to_aws = function (locals) {
 };
 
 const _setup_ping = function (locals) {
-    const initd = _initd();
+    const initd = mqtt.initd(locals);
     if (!initd.ping) {
         logger.warn({
             method: "_setup_ping",
@@ -268,11 +273,12 @@ const _setup_ping = function (locals) {
         return;
     }
 
-    if (!_mqtt) {
+    const mqtt_client = mqtt.client(locals);
+    if (!mqtt_client) {
         logger.error({
             method: "_make_out_mqtt_transporter",
             cause: "see previous errors",
-        }, "_mqtt is not set");
+        }, "mqtt_client is not set");
         return;
     }
 
@@ -293,7 +299,7 @@ const _setup_ping = function (locals) {
             p: pd,
         };
 
-        _mqtt.publish(channel, JSON.stringify(msgd), () => {
+        mqtt_client.publish(channel, JSON.stringify(msgd), () => {
             logger.info({
                 channel: channel,
             }, "pinged");
@@ -362,7 +368,7 @@ const on_profile = function (locals, profile) {
                     settings.keys.aws = awsd;
 
                     process.nextTick(() => {
-                        _setup_mqtt(locals);
+                        // _setup_mqtt(locals);
                         _setup_mqtt_to_aws(locals);
                         _setup_ping(locals);
                     });
@@ -382,7 +388,7 @@ const on_profile = function (locals, profile) {
  *  This is really 
  */
 const on_ready = function (locals) {
-    _setup_mqtt(locals);
+    // _setup_mqtt(locals);
     _setup_mqtt_to_aws(locals);
     _setup_ping(locals);
 };
