@@ -39,64 +39,12 @@ const iotdb_transport_mqtt = require('iotdb-transport-mqtt');
 const OUTPUT_TOPIC = "o";
 
 const logger = iotdb.logger({
-    name: 'homestar-homestar',
+    name: 'homestar-aws',
     module: 'homestar',
 });
 
 const mqtt = require('./mqtt');
-
-/**
- *  This makes the MQTT transporter for sending _to_ AWS.
- *
- *  Note that the message sent isn't "nice", this has to do with
- *  permission checking etc that has to take place on AWS to
- *  make sure no one is hacking the system.
- */
-const _make_out_mqtt_transporter = function (locals) {
-    const mqtt_client = mqtt.client(locals);
-    if (!mqtt_client) {
-        logger.error({
-            method: "_make_out_mqtt_transporter",
-            cause: "see previous errors",
-        }, "mqtt_client is not set");
-        return;
-    }
-
-    const settings = locals.homestar.settings;
-    const initd = mqtt.initd(locals);
-
-    const aws_url = _.d.get(settings, "keys/aws/url");
-    const aws_urlp = url.parse(aws_url);
-
-    return new iotdb_transport_mqtt.Transport({
-        verbose: true,
-        prefix: aws_urlp.path.replace(/^\//, ''),
-        allow_updated: true,
-        channel: (initd, id, band) => {
-            // throw away 'id' and 'band'
-            return iotdb_transport.channel(initd, OUTPUT_TOPIC);
-        },
-        pack: (d, id, band) => {
-            if (initd.use_iot_model && (band === "model") && d["iot:model"]) {
-                d = {
-                    "iot:model": d["iot:model"],
-                    "@timestamp": _.timestamp.epoch(),
-                };
-            }
-
-            const msgd = {
-                c: {
-                    n: "put",
-                    id: id || "",
-                    band: band || "",
-                },
-                p: d,
-            };
-
-            return JSON.stringify(msgd);
-        },
-    }, mqtt_client);
-};
+const out = require('./out');
 
 const _unpack_dir = function (body) {
     return path.join(".", ".iotdb", "certs", body.certificate_id);
@@ -144,57 +92,6 @@ const _unpack = function (body) {
 
         resolve(body);
     });
-};
-
-/**
- *  This takes the certificates from HomeStar.io and
- *  adds them to your settings
- */
-const _save = function (body) {
-    return new Promise((resolve, reject) => {
-        var awsd = {};
-
-        var keys = ["url", "consumer_key", "certificate_id", "certificate_arn", ];
-        keys.map((key) => {
-            var value = body[key];
-            if (value) {
-                awsd[key] = value;
-            }
-        });
-
-        iotdb.keystore().save("/homestar/runner/keys/aws", awsd);
-
-        logger.info({
-            module: "_save",
-        }, "added AWS keys to Keystore!");
-
-        resolve(awsd);
-    });
-};
-
-/**
- *  This does the work of setting up a connection between IOTDB and AWS
- */
-const _setup_mqtt_to_aws = function (locals) {
-    const mqtt_transporter = _make_out_mqtt_transporter(locals);
-    if (!mqtt_transporter) {
-        logger.info({
-            method: "_setup_mqtt_to_aws",
-        }, "could not make MQTTTransporter - see previous messages for reason");
-        return;
-    }
-
-    const iotdb_transporter = locals.homestar.things.make_transporter();
-    const owner = locals.homestar.users.owner();
-
-    iotdb_transport.bind(iotdb_transporter, mqtt_transporter, {
-        bands: mqtt.initd(locals).out_bands,
-        user: owner,
-    });
-
-    logger.info({
-        method: "_setup_mqtt_to_aws",
-    }, "connected AWS to Things");
 };
 
 const _setup_ping = function (locals) {
@@ -302,7 +199,7 @@ const on_profile = function (locals, profile) {
 
                     process.nextTick(() => {
                         // _setup_mqtt(locals);
-                        _setup_mqtt_to_aws(locals);
+                        out.setup(locals);
                         _setup_ping(locals);
                     });
 
@@ -321,8 +218,7 @@ const on_profile = function (locals, profile) {
  *  This is really 
  */
 const on_ready = function (locals) {
-    // _setup_mqtt(locals);
-    _setup_mqtt_to_aws(locals);
+    out.setup(locals);
     _setup_ping(locals);
 };
 
