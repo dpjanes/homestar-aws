@@ -97,7 +97,7 @@ const _setup_mqtt = function (locals) {
     const aws_url = _.d.get(settings, "keys/aws/url");
     const aws_urlp = url.parse(aws_url);
 
-    _mqtt = new iotdb_transport_mqtt.mqtt_connect({
+    _mqtt = new iotdb_transport_mqtt.connect({
         verbose: true,
         host: aws_urlp.host,
         ca: path.join(cert_folder, "rootCA.pem"),
@@ -142,6 +142,7 @@ const _make_out_mqtt_transporter = function (locals) {
             if (initd.use_iot_model && (band === "model") && d["iot:model"]) {
                 d = {
                     "iot:model": d["iot:model"],
+                    "@timestamp": _.timestamp.epoch(),
                 };
             }
 
