@@ -1,5 +1,5 @@
 /*
- *  out.js
+ *  in.js
  *
  *  David Janes
  *  IOTDB.org
@@ -30,21 +30,18 @@ const url = require('url');
 const iotdb_transport = require('iotdb-transport');
 const iotdb_transport_mqtt = require('iotdb-transport-mqtt');
 
-const OUTPUT_TOPIC = "o";
+const INPUT_TOPIC = "i";
 
 const logger = iotdb.logger({
     name: 'homestar-aws',
-    module: 'out',
+    module: 'in',
 });
 
 const mqtt = require('./mqtt');
 
 /**
- *  This makes the MQTT transporter for sending _to_ AWS.
- *
- *  Note that the message sent isn't "nice", this has to do with
- *  permission checking etc that has to take place on AWS to
- *  make sure no one is hacking the system.
+ *  This makes the MQTT transporter for receiving 
+ *  messages _from_ AWS.
  */
 const _create_transporter = function (locals) {
     const mqtt_client = mqtt.client(locals);
@@ -67,27 +64,52 @@ const _create_transporter = function (locals) {
         prefix: aws_urlp.path.replace(/^\//, ''),
         allow_updated: true,
         channel: (initd, id, band) => {
-            // throw away 'id' and 'band'
-            return iotdb_transport.channel(initd, OUTPUT_TOPIC);
+            if (id === "#") {
+                return iotdb_transport.channel(initd, INPUT_TOPIC);
+            } else {
+                return iotdb_transport.channel(initd, id, band);
+            }
         },
-        pack: (d, id, band) => {
-            if (initd.use_iot_model && (band === "model") && d["iot:model"]) {
-                d = {
-                    "iot:model": d["iot:model"],
-                    "@timestamp": _.timestamp.epoch(),
-                };
+        unchannel: (initd, topic, message) => {
+            if (!message) {
+                return;
             }
 
-            const msgd = {
-                c: {
-                    n: "put",
-                    id: id || "",
-                    band: band || "",
-                },
-                p: d,
-            };
+            try {
+                const msgd = JSON.parse(message);
 
-            return JSON.stringify(msgd);
+                if (!msgd.c) {
+                    return;
+                } else if (!msgd.p) {
+                    return;
+                } else if (msgd.c.n !== "updated") {
+                    return;
+                } /* XXX check here for bounces */
+
+                if (msgd.c.id && msgd.c.band) {
+                    return [ msgd.c.id, msgd.c.band, ];
+                }
+
+                return;
+            } catch (x) {
+                if (x.name === "SyntaxError") {
+                    return null;
+                }
+
+                throw x;
+            }
+        },
+        unpack: (message, id, band) => {
+            try {
+                const msgd = JSON.parse(message);
+                return msgd.p || null;
+            } catch (x) {
+                if (x.name === "SyntaxError") {
+                    return null;
+                }
+
+                throw x;
+            }
         },
     }, mqtt_client);
 };
@@ -108,9 +130,10 @@ const setup = function (locals) {
     const owner = locals.homestar.users.owner();
 
     iotdb_transport.bind(iotdb_transporter, mqtt_transporter, {
-        bands: mqtt.initd(locals).out_bands,
+        bands: mqtt.initd(locals).in_bands,
         user: owner,
-        updated: false,
+        updated: true,
+        verbose: true,
     });
 
     logger.info({

@@ -24,19 +24,6 @@
 
 const iotdb = require('iotdb');
 const _ = iotdb._;
-const cfg = iotdb.cfg;
-
-const path = require('path');
-const fs = require('fs');
-const url = require('url');
-const unirest = require('unirest');
-const mkdirp = require('mkdirp');
-const Q = require('q');
-
-const iotdb_transport = require('iotdb-transport');
-const iotdb_transport_mqtt = require('iotdb-transport-mqtt');
-
-const OUTPUT_TOPIC = "o";
 
 const logger = iotdb.logger({
     name: 'homestar-aws',
@@ -44,7 +31,8 @@ const logger = iotdb.logger({
 });
 
 const mqtt = require('./mqtt');
-const out = require('./out');
+const transport_out = require('./out');
+const transport_in = require('./in');
 const ping = require('./ping');
 const keys = require('./keys');
 
@@ -59,7 +47,8 @@ const keys = require('./keys');
 const on_profile = function (locals, profile) {
     keys.setup(locals, (error, added) => {
         if (added) {
-            out.setup(locals);
+            transport_out.setup(locals);
+            transport_in.setup(locals);
             ping.setup(locals);
         }
     });
@@ -77,7 +66,8 @@ const on_ready = function (locals) {
         return;
     }
 
-    out.setup(locals);
+    transport_out.setup(locals);
+    transport_in.setup(locals);
     ping.setup(locals);
 };
 
