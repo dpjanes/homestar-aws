@@ -46,54 +46,8 @@ const logger = iotdb.logger({
 const mqtt = require('./mqtt');
 const out = require('./out');
 const ping = require('./ping');
+const keys = require('./keys');
 
-const _unpack_dir = function (body) {
-    return path.join(".", ".iotdb", "certs", body.certificate_id);
-};
-
-/**
- *  This makes sure the needed folders exist
- */
-const _make_unpack_dirs = function (body) {
-    return new Promise((resolve, reject) => {
-        if (!body.certificate_id) {
-            return reject(new Error("no certificate_id?"));
-        }
-
-        mkdirp(_unpack_dir(body), function (error) {
-            if (error) {
-                return reject(error);
-            }
-
-            resolve(body);
-        });
-    });
-};
-
-/**
- *  This takes the certificates from HomeStar.io and
- *  unpacks them into the filesystem.
- */
-const _unpack = function (body) {
-    return new Promise((resolve, reject) => {
-        var file_path;
-        body.inventory = [];
-        body.inventory.push("aws.json");
-
-        for (var file_name in body.files) {
-            body.inventory.push(file_name);
-            file_path = path.join(_unpack_dir(body), file_name);
-            fs.writeFileSync(file_path, body.files[file_name]);
-        }
-
-        delete body.files;
-
-        file_path = path.join(_unpack_dir(body), "aws.json");
-        fs.writeFileSync(file_path, JSON.stringify(body, null, 2));
-
-        resolve(body);
-    });
-};
 
 /* --- iotdb-homestar API --- */
 
@@ -103,76 +57,26 @@ const _unpack = function (body) {
  *  have them already.
  */
 const on_profile = function (locals, profile) {
-    const settings = locals.homestar.settings;
-
-    const consumer_key = _.d.get(settings, "keys/homestar/key");
-    if (_.is.Empty(consumer_key)) {
-        logger.info({
-            cause: "Homestar API Keys have not been setup",
-        }, "no consumer key - can't get AWS keys");
-        return;
-    }
-
-    const keys = _.d.get(settings, "keys/aws");
-    if (keys) {
-        logger.info({}, "AWS keys already downloaded -- good to go");
-        return;
-    }
-
-    const API_ROOT = settings.homestar.url + '/api/1.0';
-    const API_CERTS = API_ROOT + '/consumers/' + consumer_key + '/certs';
-
-    unirest
-        .get(API_CERTS)
-        .headers({
-            'Accept': 'application/json',
-            'Authorization': 'Bearer ' + settings.keys.homestar.bearer,
-        })
-        .type('json')
-        .end(function (result) {
-            if (result.error || !result.body) {
-                logger.error({
-                    status: result.statusCode,
-                    url: API_CERTS,
-                    error: _.error.message(result.error),
-                }, "could not retrieve AWS keys");
-
-                return;
-            }
-
-            Q.fcall(() => result.body)
-                .then(_make_unpack_dirs)
-                .then(_unpack)
-                .then(_save)
-                .then((awsd) => {
-                    logger.info({
-                        method: "on_profile",
-                        awsd: awsd,
-                    }, "AWS keys setup");
-
-                    settings.keys.aws = awsd;
-
-                    process.nextTick(() => {
-                        // _setup_mqtt(locals);
-                        out.setup(locals);
-                        ping.setup(locals);
-                    });
-
-                })
-                .catch((error) => {
-                    logger.error({
-                        method: "on_profile",
-                        error: _.error.message(result.error),
-                    }, "could not get AWS keys");
-                });
-        });
+    keys.setup(locals, (error, added) => {
+        if (added) {
+            out.setup(locals);
+            ping.setup(locals);
+        }
+    });
 };
 
 /**
  *  Called by iotdb-homestar webserver is up and running.
- *  This is really 
  */
 const on_ready = function (locals) {
+    if (!keys.ready()) {
+        logger.warn({
+            method: "on_ready",
+        }, "AWS connection is not configured");
+
+        return;
+    }
+
     out.setup(locals);
     ping.setup(locals);
 };
