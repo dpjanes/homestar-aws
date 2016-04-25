@@ -68,6 +68,8 @@ const on_ready = function (locals) {
     transport_out.setup(locals);
     transport_in.setup(locals);
     ping.setup(locals);
+
+    return true;
 };
 
 /**

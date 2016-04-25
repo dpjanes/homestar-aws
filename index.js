@@ -22,7 +22,15 @@
 
 "use strict";
 
-var homestar = require('./homestar');
+const iotdb = require('iotdb');
+const _ = iotdb._;
+
+const homestar = require('./homestar');
+
+const logger = iotdb.logger({
+    name: 'homestar-aws',
+    module: 'index',
+});
 
 exports.homestar = {
     /**
@@ -35,3 +43,27 @@ exports.homestar = {
      */
     on_profile: homestar.on_profile,
 };
+
+/**
+ *  For iotdb.use()
+ */
+exports.use = function() {
+    var locals;
+
+    try {
+        locals = require('iotdb-homestar').locals();
+    } catch (x) {
+        logger.error({
+            method: "use",
+            cause: "some additional functions needed, you must $ npm install iotdb-homestar",
+            error: _.error.message(x),
+            stack: x.stack,
+        }, "cannot call module.use");
+        return;
+    }
+
+    if (!homestar.on_ready(locals)) {
+        homestar.on_profile(locals);
+    }
+
+}
