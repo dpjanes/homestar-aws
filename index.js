@@ -51,7 +51,7 @@ exports.use = function() {
     var locals;
 
     try {
-        locals = require('iotdb-homestar').locals();
+        locals = require('homestar').locals();
     } catch (x) {
         logger.error({
             method: "use",
