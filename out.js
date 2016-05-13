@@ -72,12 +72,17 @@ const _create_transporter = function (locals) {
             return iotdb_transport.channel(initd, OUTPUT_TOPIC);
         },
         pack: (d, id, band) => {
+            d = _.timestamp.add(d, {
+                timestamp: _.timestamp.epoch(),
+            });
+            /*
             if (initd.use_iot_model && (band === "model") && d["iot:model"]) {
                 d = {
                     "iot:model": d["iot:model"],
                     "@timestamp": _.timestamp.epoch(),
                 };
             }
+            */
 
             const msgd = {
                 c: {
@@ -85,7 +90,7 @@ const _create_transporter = function (locals) {
                     id: id || "",
                     band: band || "",
                 },
-                p: d,
+                p: JSON.stringify(d),
             };
 
             return JSON.stringify(msgd);

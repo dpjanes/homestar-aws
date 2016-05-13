@@ -84,7 +84,7 @@ const _create_transporter = function (locals) {
                     return;
                 } else if (!msgd.p) {
                     return;
-                } else if (msgd.c.n !== "updated") {
+                } else if ((msgd.c.n !== "updated") && (msgd.c.n !== "iput")) {
                     return;
                 } else if (msgd.c.src && (msgd.c.src === runner_id)) {
                     return;
