@@ -5,6 +5,7 @@
     }, 
     "dependencies": {
         "iotdb": ">=0.14.0", 
+        "iotdb-errors": "~0.0.34", 
         "iotdb-transport": "~0.0.34", 
         "iotdb-transport-mqtt": "~0.0.25", 
         "mkdirp": "~0.5.1", 

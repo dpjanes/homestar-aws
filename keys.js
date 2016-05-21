@@ -33,7 +33,7 @@ const unirest = require('unirest');
 const mkdirp = require('mkdirp');
 const Q = require('q');
 
-const errors = require('iotdb-transport').errors;
+const errors = require('iotdb-errors');
 
 const logger = iotdb.logger({
     name: 'homestar-aws',
