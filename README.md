@@ -1,5 +1,5 @@
 # homestar-aws
-HomeStar extension to allow control through AWS IoT.
+[IOTDB](https://github.com/dpjanes/node-iotdb) extension to allow control through AWS IoT.
 
 <img src="https://raw.githubusercontent.com/dpjanes/iotdb-homestar/master/docs/HomeStar.png" align="right" />
 
@@ -11,16 +11,6 @@ will be broadcast to AWS IoT MQTT. It's _private_ to you, but just beware.
 # Installation
 
 * [Install Home☆Star first](https://homestar.io/about/install).
-
-## Method #1
-
-If you are using HomeStar Runner (e.g. `homestar runner` to get a UI), this will suffice
-
-    $ homestar install homestar-aws
-
-## Method #2
-
-If you are not using HomeStar Runner, first install with NPM
 
     $ npm install homestar-aws
 
