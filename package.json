@@ -12,7 +12,7 @@
         "q": "~1.4.1", 
         "unirest": "~0.5.0"
     }, 
-    "description": "HomeStar extension to allow control through AWS IoT", 
+    "description": "IOTDB Module to allow control through AWS IoT", 
     "devDependencies": {
         "grunt": "~1.0.1", 
         "grunt-contrib-jshint": "~1.0.0", 
