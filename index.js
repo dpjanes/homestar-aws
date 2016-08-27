@@ -65,5 +65,4 @@ exports.use = function() {
     if (!homestar.on_ready(locals)) {
         homestar.on_profile(locals);
     }
-
 }
