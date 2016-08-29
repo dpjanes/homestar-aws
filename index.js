@@ -66,3 +66,5 @@ exports.use = function() {
         homestar.on_profile(locals);
     }
 }
+
+exports.module_folder = __dirname;
