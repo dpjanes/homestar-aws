@@ -57,7 +57,7 @@ const _create_transporter = function () {
         return;
     }
 
-    const aws_url = iotdb.keystore().get("/homestar/runner/keys/aws/url", null);
+    const aws_url = iotdb.settings().get("/homestar/runner/keys/aws/url", null);
     const aws_urlp = url.parse(aws_url);
 
     return iotdb_transport_mqtt.make({

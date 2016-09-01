@@ -46,7 +46,7 @@ const mqtt_client = () => {
         return _mqtt_client;
     }
 
-    const certificate_id = iotdb.keystore().get("/homestar/runner/keys/aws/certificate_id")
+    const certificate_id = iotdb.settings().get("/homestar/runner/keys/aws/certificate_id")
     if (!certificate_id) {
         logger.error({
             method: "mqtt_client",
@@ -70,7 +70,7 @@ const mqtt_client = () => {
     }
     const cert_folder = folders[0];
         
-    const aws_url = iotdb.keystore().get("/homestar/runner/keys/aws/url");
+    const aws_url = iotdb.settings().get("/homestar/runner/keys/aws/url");
     const aws_urlp = url.parse(aws_url);
 
     _mqtt_client = iotdb_transport_mqtt.connect({

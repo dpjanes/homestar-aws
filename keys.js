@@ -89,7 +89,7 @@ const _unpack = function (body) {
 
 /**
  */
-var _save = function(body) {
+const _save = function(body) {
     return new Promise(( resolve, reject ) => {
         var awsd = {};
 
@@ -101,7 +101,7 @@ var _save = function(body) {
             }
         });
 
-        iotdb.keystore().save("/homestar/runner/keys/aws", awsd);
+        iotdb.settings().save("/homestar/runner/keys/aws", awsd);
 
         logger.info({
             module: "_save",
@@ -114,10 +114,7 @@ var _save = function(body) {
 /**
  *  Return true if keys are in place
  */
-const ready = function(locals) {
-    const settings = locals.homestar.settings;
-    return !_.is.Empty(_.d.get(settings, "keys/aws"));
-};
+const ready = () => !_.is.Empty(iotdb.settings().get("/homestar/runner/keys/aws/url"));
 
 /**
  *  It will get X.509 certificates to contact AWS if you do not have them already.
@@ -127,7 +124,7 @@ const ready = function(locals) {
 const setup = function (locals, done) {
     const settings = locals.homestar.settings;
 
-    const consumer_key = _.d.get(settings, "keys/homestar/key");
+    const consumer_key = iotdb.settings().get("/homestar/runner/keys/homestar/key");
     if (_.is.Empty(consumer_key)) {
         logger.info({
             method: "setup",

@@ -40,7 +40,7 @@ const mqtt = require('./mqtt');
  *  Send a message to AWS saying we're alive
  */
 const setup = function () {
-    let ping = iotdb.keystore().get("/bridges/homestar-aws/initd/ping", 5 * 60)
+    let ping = iotdb.settings().get("/bridges/homestar-aws/initd/ping", 5 * 60)
     if (ping === 0) {
         logger.warn({
             method: "ping",
@@ -56,7 +56,7 @@ const setup = function () {
         return;
     }
 
-    const aws_url = iotdb.keystore().get("/homestar/runner/keys/aws/url", null);
+    const aws_url = iotdb.settings().get("/homestar/runner/keys/aws/url", null);
     const aws_urlp = url.parse(aws_url);
     const channel = aws_urlp.path.replace(/^\//, '') + "/" + OUTPUT_TOPIC;
 
