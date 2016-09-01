@@ -39,16 +39,15 @@ const mqtt = require('./mqtt');
 /**
  *  Send a message to AWS saying we're alive
  */
-const setup = function (locals) {
-    const initd = mqtt.initd(locals);
-    if (!initd.ping) {
+const setup = function () {
+    let ping = iotdb.keystore().get("/bridges/homestar-aws/initd/ping", 5 * 60)
+    if (ping === 0) {
         logger.warn({
             method: "ping",
         }, "AWS ping is turned off");
-        return;
     }
 
-    const mqtt_client = mqtt.client(locals);
+    const mqtt_client = mqtt.client();
     if (!mqtt_client) {
         logger.error({
             method: "ping",
@@ -57,8 +56,7 @@ const setup = function (locals) {
         return;
     }
 
-    const settings = locals.homestar.settings;
-    const aws_url = _.d.get(settings, "keys/aws/url");
+    const aws_url = iotdb.keystore().get("/homestar/runner/keys/aws/url", null);
     const aws_urlp = url.parse(aws_url);
     const channel = aws_urlp.path.replace(/^\//, '') + "/" + OUTPUT_TOPIC;
 
@@ -83,7 +81,7 @@ const setup = function (locals) {
     };
 
     _ping();
-    setInterval(_ping, initd.ping * 1000);
+    setInterval(_ping, ping * 1000);
 };
 
 /**

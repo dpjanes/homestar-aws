@@ -29,6 +29,7 @@ const url = require('url');
 
 const iotdb_transport = require('iotdb-transport');
 const iotdb_transport_mqtt = require('iotdb-transport-mqtt');
+const iotdb_transport_iotdb = require('iotdb-transport-iotdb');
 
 const OUTPUT_TOPIC = "o";
 
@@ -46,8 +47,8 @@ const mqtt = require('./mqtt');
  *  permission checking etc that has to take place on AWS to
  *  make sure no one is hacking the system.
  */
-const _create_transporter = function (locals) {
-    const mqtt_client = mqtt.client(locals);
+const _create_transporter = function () {
+    const mqtt_client = mqtt.client();
     if (!mqtt_client) {
         logger.error({
             method: "connect",
@@ -56,41 +57,32 @@ const _create_transporter = function (locals) {
         return;
     }
 
-    const settings = locals.homestar.settings;
-    const initd = mqtt.initd(locals);
-
-    const aws_url = _.d.get(settings, "keys/aws/url");
+    const aws_url = iotdb.keystore().get("/homestar/runner/keys/aws/url", null);
     const aws_urlp = url.parse(aws_url);
 
-    return new iotdb_transport_mqtt.Transport({
+    return iotdb_transport_mqtt.make({
         what: "AWS-OUT",
         verbose: true,
         prefix: aws_urlp.path.replace(/^\//, ''),
         allow_updated: false,
-        channel: (initd, id, band) => {
-            // throw away 'id' and 'band'
-            return iotdb_transport.channel(initd, OUTPUT_TOPIC);
-        },
-        pack: (d, id, band) => {
-            d = _.timestamp.add(d, {
-                timestamp: _.timestamp.epoch(),
-            });
-            /*
-            if (initd.use_iot_model && (band === "model") && d["iot:model"]) {
-                d = {
-                    "iot:model": d["iot:model"],
-                    "@timestamp": _.timestamp.epoch(),
-                };
-            }
-            */
 
+        // throw away 'id' and 'band'
+        channel: (paramd, d) => iotdb_transport.channel(paramd, { id: OUTPUT_TOPIC }),
+        pack: (paramd, d) => {
             const msgd = {
                 c: {
                     n: "put",
-                    id: id || "",
-                    band: band || "",
+                    id: d.id || "",
+                    band: d.band || "",
                 },
-                p: JSON.stringify(d),
+                p: _.timestamp.add(d.value, {
+                    timestamp: _.timestamp.epoch(),
+                }),
+                /*
+                p: JSON.stringify(_.timestamp.add(d.value, {
+                    timestamp: _.timestamp.epoch(),
+                })),
+                */
             };
 
             return JSON.stringify(msgd);
@@ -101,8 +93,8 @@ const _create_transporter = function (locals) {
 /**
  *  This does the work of setting up a connection between IOTDB and AWS
  */
-const setup = function (locals) {
-    const mqtt_transporter = _create_transporter(locals);
+const setup = function () {
+    const mqtt_transporter = _create_transporter();
     if (!mqtt_transporter) {
         logger.info({
             method: "setup",
@@ -110,14 +102,8 @@ const setup = function (locals) {
         return;
     }
 
-    const iotdb_transporter = locals.homestar.things.make_transporter();
-    const owner = locals.homestar.users.owner();
-
-    iotdb_transport.bind(iotdb_transporter, mqtt_transporter, {
-        bands: mqtt.initd(locals).out_bands,
-        user: owner,
-        updated: false,
-    });
+    const iotdb_transporter = iotdb_transport_iotdb.make({});
+    mqtt_transporter.monitor(iotdb_transporter);
 
     logger.info({
         method: "setup",

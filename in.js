@@ -29,6 +29,7 @@ const url = require('url');
 
 const iotdb_transport = require('iotdb-transport');
 const iotdb_transport_mqtt = require('iotdb-transport-mqtt');
+const iotdb_transport_iotdb = require('iotdb-transport-iotdb');
 
 const INPUT_TOPIC = "i";
 
@@ -43,8 +44,8 @@ const mqtt = require('./mqtt');
  *  This makes the MQTT transporter for receiving 
  *  messages _from_ AWS.
  */
-const _create_transporter = function (locals) {
-    const mqtt_client = mqtt.client(locals);
+const _create_transporter = function () {
+    const mqtt_client = mqtt.client();
     if (!mqtt_client) {
         logger.error({
             method: "connect",
@@ -53,51 +54,53 @@ const _create_transporter = function (locals) {
         return;
     }
 
-    const settings = locals.homestar.settings;
-    const initd = mqtt.initd(locals);
-
-    const aws_url = _.d.get(settings, "keys/aws/url");
+    const aws_url = iotdb.keystore().get("/homestar/runner/keys/aws/url", null);
     const aws_urlp = url.parse(aws_url);
 
-    const runner_id = _.d.get(settings, "keys/homestar/key", null);
+    const runner_id = iotdb.keystore().get("/homestar/runner/keys/aws/key", null);
 
-    return new iotdb_transport_mqtt.Transport({
+    return iotdb_transport_mqtt.make({
         verbose: true,
         prefix: aws_urlp.path.replace(/^\//, ''),
         allow_updated: true,
-        channel: (initd, id, band) => {
-            if (id === "#") {
-                return iotdb_transport.channel(initd, INPUT_TOPIC);
+        channel: (paramd, d) => {
+            if (d.id === "#") {
+                return iotdb_transport.channel(paramd, {
+                    id: INPUT_TOPIC,
+                });
             } else {
-                return iotdb_transport.channel(initd, id, band);
+                return iotdb_transport.channel(paramd, d);
             }
         },
-        unchannel: (initd, topic, message) => {
+        unchannel: (paramd, topic, message) => {
             if (!message) {
-                return;
+                return {};
             }
 
             try {
                 const msgd = JSON.parse(message);
 
                 if (!msgd.c) {
-                    return;
+                    return {};
                 } else if (!msgd.p) {
-                    return;
+                    return {};
                 } else if ((msgd.c.n !== "updated") && (msgd.c.n !== "iput")) {
-                    return;
+                    return {};
                 } else if (msgd.c.src && (msgd.c.src === runner_id)) {
-                    return;
+                    return {};
                 }
 
                 if (msgd.c.id && msgd.c.band) {
-                    return [ msgd.c.id, msgd.c.band, ];
+                    return {
+                        id: msgd.c.id, 
+                        band: msgd.c.band,
+                    };
                 }
 
                 return;
             } catch (x) {
                 if (x.name === "SyntaxError") {
-                    return null;
+                    return {};
                 }
 
                 throw x;
@@ -121,8 +124,8 @@ const _create_transporter = function (locals) {
 /**
  *  This does the work of setting up a connection between IOTDB and AWS
  */
-const setup = function (locals) {
-    const mqtt_transporter = _create_transporter(locals);
+const setup = function () {
+    const mqtt_transporter = _create_transporter();
     if (!mqtt_transporter) {
         logger.info({
             method: "setup",
@@ -130,22 +133,8 @@ const setup = function (locals) {
         return;
     }
 
-    const iotdb_transporter = locals.homestar.things.make_transporter();
-    const owner = locals.homestar.users.owner();
-
-    iotdb_transport.bind(iotdb_transporter, mqtt_transporter, {
-        bands: mqtt.initd(locals).in_bands,
-        user: owner,
-        updated: true,
-        verbose: true,
-        update: false,
-        updated: true,
-        get: false,
-        list: false,
-        added: false,
-        copy: false,
-        what: "AWS-OUT",
-    });
+    const iotdb_transporter = iotdb_transport_iotdb.make({});
+    iotdb_transporter.monitor(mqtt_transporter);
 
     logger.info({
         method: "setup",

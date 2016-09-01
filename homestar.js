@@ -30,7 +30,6 @@ const logger = iotdb.logger({
     module: 'homestar',
 });
 
-const mqtt = require('./mqtt');
 const transport_out = require('./out');
 const transport_in = require('./in');
 const ping = require('./ping');
