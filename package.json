@@ -4,7 +4,7 @@
         "url": "https://github.com/dpjanes/homestar-aws/issues"
     }, 
     "dependencies": {
-        "homestar": "~3.0.3", 
+        "homestar": "~3.0.4", 
         "iotdb": ">=3.0.0", 
         "iotdb-errors": "~3.0.2", 
         "iotdb-transport": "~3.0.6", 
@@ -32,7 +32,7 @@
     "main": "index.js", 
     "name": "homestar-aws", 
     "optionalDependencies": {
-        "homestar": "~3.0.3"
+        "homestar": "~3.0.4"
     }, 
     "private": false, 
     "repository": {
@@ -42,5 +42,5 @@
     "scripts": {
         "test": "grunt"
     }, 
-    "version": "3.0.1"
+    "version": "3.0.2"
 }
