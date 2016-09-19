@@ -7,9 +7,9 @@
         "homestar": "~3.0.4", 
         "iotdb": ">=3.0.0", 
         "iotdb-errors": "~3.0.2", 
-        "iotdb-transport": "~3.0.6", 
-        "iotdb-transport-iotdb": "~3.0.3", 
-        "iotdb-transport-mqtt": "~3.0.3", 
+        "iotdb-transport": "~3.0.9", 
+        "iotdb-transport-iotdb": "~3.0.5", 
+        "iotdb-transport-mqtt": "~3.0.4", 
         "mkdirp": "~0.5.1", 
         "q": "~1.4.1", 
         "unirest": "~0.5.1"
@@ -24,7 +24,7 @@
         "grunt-jsbeautifier": "~0.2.13", 
         "jshint-stylish": "~2.2.1", 
         "load-grunt-tasks": "~3.5.2", 
-        "request": "~2.74.0"
+        "request": "~2.75.0"
     }, 
     "homepage": "https://homestar.io", 
     "homestar": {}, 
@@ -42,5 +42,5 @@
     "scripts": {
         "test": "grunt"
     }, 
-    "version": "3.0.2"
+    "version": "3.0.3"
 }
