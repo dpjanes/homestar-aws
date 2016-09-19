@@ -133,6 +133,9 @@ const setup = function () {
         return;
     }
 
+    // do not allow writes
+    mqtt_transporter.rx.put = (observer, d) => observer.onCompleted();
+
     const iotdb_transporter = iotdb_transport_iotdb.make({});
     iotdb_transporter.monitor(mqtt_transporter);
 

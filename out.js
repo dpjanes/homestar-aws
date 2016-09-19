@@ -75,14 +75,14 @@ const _create_transporter = function () {
                     id: d.id || "",
                     band: d.band || "",
                 },
+                /*
                 p: _.timestamp.add(d.value, {
                     timestamp: _.timestamp.epoch(),
                 }),
-                /*
+                */
                 p: JSON.stringify(_.timestamp.add(d.value, {
                     timestamp: _.timestamp.epoch(),
                 })),
-                */
             };
 
             return JSON.stringify(msgd);

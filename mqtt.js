@@ -80,10 +80,12 @@ const mqtt_client = () => {
         cert: path.join(cert_folder, "cert.pem"),
         key: path.join(cert_folder, "private.pem"),
     }, error => {
-        logger.error({
-            error: _.error.message(error),
-            cause: "check previous errors",
-        }, "could not not create MQTT client - serious");
+        if (error) {
+            logger.error({
+                error: _.error.message(error),
+                cause: "check previous errors",
+            }, "could not not create MQTT client - serious");
+        }
     });
 
     return _mqtt_client;

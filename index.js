@@ -25,46 +25,64 @@
 const iotdb = require('iotdb');
 const _ = iotdb._;
 
-const homestar = require('./homestar');
+const iotdb_homestar = require('homestar');
+
+const transport_out = require('./out');
+const transport_in = require('./in');
+const ping = require('./ping');
+const keys = require('./keys');
 
 const logger = iotdb.logger({
     name: 'homestar-aws',
     module: 'index',
 });
 
-exports.homestar = {
-    /**
-     *  Called whenever webserver is up and running
-     */
-    on_ready: homestar.on_ready,
+/*
+ *  called whenever webserver is up and running
+ */
+const on_ready = function (locals) {
+    if (!keys.ready(locals)) {
+        logger.warn({
+            method: "on_ready",
+        }, "AWS connection is not configured");
 
-    /**
-     *  Called when the profile is updated
-     */
-    on_profile: homestar.on_profile,
+        return;
+    }
+
+    transport_out.setup(locals);
+    transport_in.setup(locals);
+    ping.setup(locals);
+
+    return true;
+};
+
+/**
+ *  For homestar
+ */
+exports.homestar = {
+    on_ready: on_ready,
 };
 
 /**
  *  For iotdb.use()
  */
-exports.use = function() {
-    var locals;
+exports.use = () => on_ready(require('homestar').locals());
 
-    try {
-        locals = require('homestar').locals();
-    } catch (x) {
-        logger.error({
-            method: "use",
-            cause: "some additional functions needed, you must $ npm install iotdb-homestar",
-            error: _.error.message(x),
-            stack: x.stack,
-        }, "cannot call module.use");
-        return;
-    }
+/**
+ *  For "$ homestar configure homestar-aws"
+ */
+exports.configure_cli = (done) =>{
+    const locals = iotdb_homestar.locals();
 
-    if (!homestar.on_ready(locals)) {
-        homestar.on_profile(locals);
-    }
-}
+    keys.setup(locals, (error, is_added) => {
+        if (error) {
+            done(error);
+        } else if (is_added) {
+            done(null, "AWS keys added - ready to roll");
+        } else {
+            done(null, "AWS already set up");
+        }
+    });
+};
 
 exports.module_folder = __dirname;

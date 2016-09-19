@@ -42,6 +42,7 @@ const keys = require('./keys');
  *  It will get X.509 certificates to contact AWS if you do not
  *  have them already.
  */
+/*
 const on_profile = function (locals, profile) {
     keys.setup(locals, (error, added) => {
         if (added) {
@@ -51,6 +52,7 @@ const on_profile = function (locals, profile) {
         }
     });
 };
+*/
 
 /**
  *  Called by iotdb-homestar webserver is up and running.
@@ -74,5 +76,7 @@ const on_ready = function (locals) {
 /**
  *  API
  */
+/*
 exports.on_ready = on_ready;
 exports.on_profile = on_profile;
+*/

@@ -134,7 +134,7 @@ const setup = function (locals, done) {
         return done(new errors.SetupRequired(), false);
     }
 
-    if (ready(locals)) {
+    if (ready()) {
         logger.info({
             method: "setup",
         }, "AWS keys already downloaded -- good to go");
@@ -172,7 +172,7 @@ const setup = function (locals, done) {
                         awsd: awsd,
                     }, "AWS keys setup");
 
-                    settings.keys.aws = awsd;
+                    // settings.keys.aws = awsd;
 
                     done(null, true);
 
