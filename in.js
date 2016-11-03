@@ -80,6 +80,8 @@ const _create_transporter = function () {
             try {
                 const msgd = JSON.parse(message);
 
+                // console.log("HERE:XXX", topic, msgd);
+
                 if (!msgd.c) {
                     return {};
                 } else if (!msgd.p) {
