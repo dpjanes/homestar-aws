@@ -68,7 +68,7 @@ const _create_transporter = function () {
 
         // throw away 'id' and 'band'
         channel: (paramd, d) => iotdb_transport.channel(paramd, { id: OUTPUT_TOPIC }),
-        pack: (paramd, d) => {
+        pack: (d) => {
             const msgd = {
                 c: {
                     n: "put",
