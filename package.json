@@ -4,12 +4,12 @@
         "url": "https://github.com/dpjanes/homestar-aws/issues"
     }, 
     "dependencies": {
-        "homestar": "~3.0.4", 
+        "homestar": "~3.0.7", 
         "iotdb": ">=3.0.0", 
         "iotdb-errors": "~3.0.2", 
-        "iotdb-transport": "~3.0.9", 
+        "iotdb-transport": "~3.0.12", 
         "iotdb-transport-iotdb": "~3.0.5", 
-        "iotdb-transport-mqtt": "~3.0.4", 
+        "iotdb-transport-mqtt": "~3.0.6", 
         "mkdirp": "~0.5.1", 
         "q": "~1.4.1", 
         "unirest": "~0.5.1"
@@ -17,22 +17,22 @@
     "description": "IOTDB Module to allow control / monitoring with AWS IoT", 
     "devDependencies": {
         "grunt": "~1.0.1", 
-        "grunt-contrib-jshint": "~1.0.0", 
+        "grunt-contrib-jshint": "~1.1.0", 
         "grunt-contrib-nodeunit": "~1.0.0", 
         "grunt-contrib-uglify": "~2.0.0", 
         "grunt-contrib-watch": "~1.0.0", 
         "grunt-jsbeautifier": "~0.2.13", 
         "jshint-stylish": "~2.2.1", 
         "load-grunt-tasks": "~3.5.2", 
-        "request": "~2.75.0"
+        "request": "~2.79.0"
     }, 
-    "homepage": "https://github.com/dpjanes/node-iotdb",
+    "homepage": "https://github.com/dpjanes/node-iotdb", 
     "homestar": {}, 
     "license": "Apache-2.0", 
     "main": "index.js", 
     "name": "homestar-aws", 
     "optionalDependencies": {
-        "homestar": "~3.0.4"
+        "homestar": "~3.0.7"
     }, 
     "private": false, 
     "repository": {
@@ -42,5 +42,5 @@
     "scripts": {
         "test": "grunt"
     }, 
-    "version": "3.0.3"
+    "version": "3.0.4"
 }
